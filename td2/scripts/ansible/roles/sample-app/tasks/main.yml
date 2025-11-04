@@ -1,5 +1,7 @@
 - name: Add Node packages to yum  
   shell: curl -fsSL https://rpm.nodesource.com/setup_21.x | bash -
+  args:
+    creates: /etc/yum.repos.d/nodesource-nodejs.repo
 
 - name: Install Node.js
   yum:
@@ -8,7 +10,13 @@
 - name: Copy sample app           
   copy:
     src: app.js
-    dest: app.js
+    dest: /home/ec2-user/app.js
+    owner: ec2-user
+    group: ec2-user
+    mode: 0755
 
 - name: Start sample app          
-  shell: nohup node app.js &
+  shell: nohup node /home/ec2-user/app.js & echo $! > /tmp/node-app.pid
+  args:
+    chdir: /home/ec2-user/
+    creates: /tmp/node-app.pid
