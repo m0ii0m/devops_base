@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Lab 5)
+name: CI/CD Pipeline
 
 # Déclenchement sur push et pull request vers main (Comme dans le TD)
 on:
