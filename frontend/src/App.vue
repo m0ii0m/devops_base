@@ -4,36 +4,15 @@ import { ref, onMounted } from 'vue'
 const trombones = ref(0)
 const productionRate = ref(0)
 const clickValue = ref(1)
+
+// Coûts des améliorations
 const autoClipperCost = ref(50)
+const megaCursorCost = ref(100)
 
-// --- NOUVEAU : Charger la partie au lancement ---
-onMounted(() => {
-  loadGame()
-  // Lancer la boucle de sauvegarde auto toutes les 10 secondes (optionnel mais cool)
-  setInterval(saveGame, 10000)
-})
-
-const loadGame = async () => {
-  try {
-    const response = await fetch('http://localhost:5000/api/state') 
-    const data = await response.json()
-    
-    if (data) {
-      trombones.value = data.trombones || 0
-      productionRate.value = data.production_rate || 0
-      if (productionRate.value > 0) {
-         autoClipperCost.value = 50 * Math.pow(1.5, productionRate.value)
-      }
-    }
-  } catch (e) {
-    console.error("Impossible de charger la sauvegarde", e)
-  }
-}
-// ------------------------------------------------
-
+// Logique du jeu
 const clickPaperclip = () => {
   trombones.value += clickValue.value
-  saveGame() 
+  saveGame() // Sauvegarde optimiste
 }
 
 const buyAutoClipper = () => {
@@ -41,16 +20,17 @@ const buyAutoClipper = () => {
     trombones.value -= autoClipperCost.value
     productionRate.value += 1
     autoClipperCost.value = Math.floor(autoClipperCost.value * 1.5)
-    saveGame()
   }
 }
 
+// Boucle de jeu (1 seconde)
 setInterval(() => {
   if (productionRate.value > 0) {
     trombones.value += productionRate.value
   }
 }, 1000)
 
+// Connexion Backend (Exemple simple)
 const saveGame = async () => {
   try {
     await fetch('http://localhost:5000/api/save', {
@@ -61,9 +41,8 @@ const saveGame = async () => {
         production_rate: productionRate.value 
       })
     })
-    console.log("Partie sauvegardée !")
   } catch (e) {
-    console.error("Erreur sauvegarde", e)
+    console.error("Erreur backend", e)
   }
 }
 </script>
