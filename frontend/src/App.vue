@@ -37,7 +37,7 @@ function useGameState() {
 
   const loadGame = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/state', {
+      const response = await fetch('/api/state', {
         method: 'GET',
         headers: getHeaders()
       }) 
@@ -58,7 +58,7 @@ function useGameState() {
 
   const saveGame = async () => {
     try {
-      await fetch('http://localhost:5000/api/save', {
+      await fetch('/api/save', {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ 
@@ -72,7 +72,7 @@ function useGameState() {
   const resetGame = async () => {
     if (!confirm("ATTENTION : Cela va effacer définitivement votre ville dans la base de données. Continuer ?")) return
     try {
-      await fetch('http://localhost:5000/api/reset', { 
+      await fetch('/api/reset', { 
         method: 'DELETE',
         headers: getHeaders()
       })

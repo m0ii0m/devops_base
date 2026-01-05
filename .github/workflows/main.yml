@@ -55,8 +55,41 @@ jobs:
       - name: Récupération du code
         uses: actions/checkout@v3
 
-      - name: Construction Image Backend
-        run: docker build -t paperclip-backend ./backend
+      - name: Login to Docker Hub
+        # Ne s'execute que si les secrets sont configurés (éviter échec en fork)
+        if: env.DOCKER_USERNAME != ''
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Construction Image Frontend
-        run: docker build -t paperclip-frontend ./frontend
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: true
+          tags: m0ii0m69/paperclip-backend:latest
+
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: m0ii0m69/paperclip-frontend:latest
+
+
+  # --- JOB 3 : DÉPLOIEMENT CONTINU (CD) ---
+  deploy:
+    name: "Deploy to Kubernetes"
+    needs: build-images
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Simulation de déploiement
+        run: |
+          echo "Simulating deployment to Kubernetes..."
+          echo "Applying manifests from ./k8s/"
+          echo "kubectl apply -f ./k8s/"
+          
+      - name: Checkout Code (pour récupérer les manifestes)
+        uses: actions/checkout@v3
