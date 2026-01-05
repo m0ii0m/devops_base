@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        # L'image sera tirée depuis Docker Hub
+        image: m0ii0m69/paperclip-backend:latest 
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+          # Connexion à DB via le nom du Service K8s
+          - name: REDIS_HOST
+            value: "redis"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
