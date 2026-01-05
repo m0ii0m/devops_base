@@ -95,8 +95,11 @@ resource "aws_instance" "k3s_server" {
   # Script de démarrage (UserData)
   user_data = <<-EOF
               #!/bin/bash
-              # Installer K3s (Kubernetes allégé)
-              curl -sfL https://get.k3s.io | sh -
+              # 1. Récupérer l'IP publique de l'instance (Métadonnées AWS)
+              PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+              
+              # 2. Installer K3s avec l'option --tls-san pour accepter cette IP
+              curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --tls-san $PUBLIC_IP" sh -
               
               # Attendre que le fichier de config soit créé
               sleep 10
