@@ -85,13 +85,18 @@ jobs:
     name: "Deploy to Kubernetes"
     needs: build-images
     runs-on: ubuntu-latest
+    env:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
     
     steps:
-      - name: Simulation de déploiement
+      - name: Deploy to K8s Cluster
+        if: env.KUBECONFIG != ''
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ env.KUBECONFIG }}
+
+      - name: Apply Manifests
+        if: env.KUBECONFIG != ''
         run: |
-          echo "Simulating deployment to Kubernetes..."
-          echo "Applying manifests from ./k8s/"
-          echo "kubectl apply -f ./k8s/"
-          
-      - name: Checkout Code (pour récupérer les manifestes)
-        uses: actions/checkout@v3
+            kubectl apply -f ./k8s/
