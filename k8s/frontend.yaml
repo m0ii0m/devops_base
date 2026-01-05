@@ -29,8 +29,26 @@ metadata:
 spec:
   selector:
     app: frontend
-  type: LoadBalancer # Pour accéder depuis l'extérieur (ou NodePort sur Minikube)
+  type: ClusterIP
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
