@@ -2,11 +2,24 @@ version: '3'
 services:
   backend:
     build: ./backend
+    networks:
+      - internal
     ports:
       - "5000:5000"
   frontend:
     build: ./frontend
-    ports:
-      - "8080:80"
+    networks:
+      - internal
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.clicker.rule=Host(`clicker.moiiom.fr`)"
+      - "traefik.http.routers.clicker.entrypoints=websecure"
+      - "traefik.http.routers.clicker.tls.certresolver=myresolver"
     depends_on:
       - backend
+
+networks:
+  internal:
+  web:
+    external: true

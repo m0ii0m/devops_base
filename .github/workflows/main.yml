@@ -1,19 +1,18 @@
 name: CI/CD Pipeline
 
-# Déclenchement sur push et pull request vers main (Comme dans le TD)
+# Exécution sur push et pull request vers main
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   # --- JOB 1 : TESTS UNITAIRES (Intégration Continue) ---
   test-backend:
     name: "Run Backend Tests"
     runs-on: ubuntu-latest
-    
-    # On lance un service Redis temporaire pour que les tests fonctionnent
     services:
       redis:
         image: redis:alpine
@@ -26,8 +25,8 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Récupération du code (Checkout)
-        uses: actions/checkout@v3
+      - name: Récupération du code
+        uses: actions/checkout@v4
 
       - name: Installation de Python
         uses: actions/setup-python@v4
@@ -47,18 +46,16 @@ jobs:
   # --- JOB 2 : BUILD DOCKER (Livraison Continue) ---
   build-images:
     name: "Build Docker Images"
-    # Condition critique du projet : "Si Test = OK alors Image docker"
     needs: test-backend
     runs-on: ubuntu-latest
     env:
        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}    
+       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     steps:
       - name: Récupération du code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Login to Docker Hub
-        # Ne s'execute que si les secrets sont configurés (éviter échec en fork)
         if: env.DOCKER_USERNAME != ''
         uses: docker/login-action@v2
         with:
@@ -70,36 +67,27 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: m0ii0m69/paperclip-backend:latest
+          tags: m0ii0m69/clicker-backend:latest
 
       - name: Build & Push Frontend
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
           push: true
-          tags: m0ii0m69/paperclip-frontend:latest
+          tags: m0ii0m69/clicker-frontend:latest
 
-
-  # --- JOB 3 : DÉPLOIEMENT CONTINU (CD) ---
+  # --- JOB 3 : DÉPLOIEMENT (Production) ---
   deploy:
-    name: "Deploy to Kubernetes"
+    name: "Deploy to Production"
     needs: build-images
-    runs-on: ubuntu-latest
-    env:
-      KUBECONFIG: ${{ secrets.KUBECONFIG }}
-    
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Deploy to K8s Cluster
-        if: env.KUBECONFIG != ''
-        uses: azure/k8s-set-context@v3
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ env.KUBECONFIG }}
+      - name: Deploy with Docker Compose
+        run: docker-compose up -d --build --remove-orphans
 
-      - name: Apply Manifests
-        if: env.KUBECONFIG != ''
-        run: |
-            kubectl apply -f ./k8s/
+      - name: Cleanup unused images
+        run: docker image prune -f
