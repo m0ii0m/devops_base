@@ -53,23 +53,23 @@ export function useSaveManager(population, growthRate, upgradeCounts, saveGame) 
         const fileContent = JSON.parse(e.target.result)
         let rawJson = ""
 
-        if (fileContent._data && fileContent._signature) {
-          // Version sécurisée (Anti-triche)
-          try {
-            rawJson = decodeURIComponent(escape(atob(fileContent._data)))
-          } catch (err) {
-            alert('Fichier de sauvegarde corrompu.')
-            return
-          }
+        if (!fileContent._data || !fileContent._signature) {
+          alert('Fichier de sauvegarde invalide ou obsolète.')
+          return
+        }
 
-          const expectedHash = generateHash(rawJson + SECRET_SALT)
-          if (expectedHash !== fileContent._signature) {
-            alert('🛑 TRICHE DÉTECTÉE ! Le fichier de sauvegarde a été falsifié.')
-            return
-          }
-        } else {
-          // Rétrocompatibilité avec les anciennes sauvegardes en texte clair
-          rawJson = e.target.result
+        // Version sécurisée (Anti-triche)
+        try {
+          rawJson = decodeURIComponent(escape(atob(fileContent._data)))
+        } catch (err) {
+          alert('Fichier de sauvegarde corrompu.')
+          return
+        }
+
+        const expectedHash = generateHash(rawJson + SECRET_SALT)
+        if (expectedHash !== fileContent._signature) {
+          alert('🛑 TRICHE DÉTECTÉE ! Le fichier de sauvegarde a été falsifié.')
+          return
         }
 
         const data = JSON.parse(rawJson)
