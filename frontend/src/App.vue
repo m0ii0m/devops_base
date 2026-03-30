@@ -4,16 +4,17 @@ import { useCityVisuals } from './composables/useCityVisuals'
 import { useSaveManager } from './composables/useSaveManager'
 import { useApi } from './composables/useApi'
 import GamePanel from './components/GamePanel.vue'
+import BonusPanel from './components/BonusPanel.vue'
 import IsoScene from './components/IsoScene.vue'
 
 // Composables
 const { userId, copyDebugId } = useApi()
 const {
-  population, growthRate, cityRank, upgradesList, upgradeCounts, clickPower,
+  population, growthRate, cityRank, upgradesList, upgradeCounts, clickPower, acquiredBonuses,
   comboMultiplier, comboProgress,
-  buildHouse, buyUpgrade, resetGame, loadGame, saveGame
+  buildHouse, buyUpgrade, buyBonus, resetGame, loadGame, saveGame
 } = useGameState()
-const { zones } = useCityVisuals(upgradeCounts)
+const { zones } = useCityVisuals(upgradeCounts, acquiredBonuses)
 const { exportSave, importSave } = useSaveManager(population, growthRate, upgradeCounts, saveGame)
 </script>
 
@@ -29,6 +30,7 @@ const { exportSave, importSave } = useSaveManager(population, growthRate, upgrad
       :clickPower="clickPower"
       :comboMultiplier="comboMultiplier"
       :comboProgress="comboProgress"
+      :maxMultiplier="maxMultiplier"
       @build="buildHouse"
       @buyUpgrade="buyUpgrade"
       @refresh="loadGame"
@@ -36,6 +38,11 @@ const { exportSave, importSave } = useSaveManager(population, growthRate, upgrad
       @import="importSave"
       @reset="resetGame"
       @copyId="copyDebugId"
+    />
+    <BonusPanel
+      :population="population"
+      :acquiredBonuses="acquiredBonuses"
+      @buy="buyBonus"
     />
   </div>
 </template>

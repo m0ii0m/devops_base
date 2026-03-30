@@ -1,6 +1,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from './useApi'
 import { UPGRADES, getUpgradeCost } from '../config/upgrades'
+import { BONUSES } from '../config/bonuses'
 import { COMBO_CONFIG } from '../config/gameConfig'
 
 export function useGameState() {
@@ -8,17 +9,37 @@ export function useGameState() {
 
   // Etat réactif
   const population = ref(0)
-  const growthRate = ref(0)
   const upgradeCounts = ref({})
+  const acquiredBonuses = ref([])
 
   // Système de Combo
   const comboMultiplier = ref(1.0)
   const comboProgress = ref(0)
 
-  // Paramètres de Combo calculés (pour permettre des bonus futurés via Upgrades)
-  const maxMultiplier = computed(() => COMBO_CONFIG.MAX_MULTIPLIER)
-  const progressOnClick = computed(() => COMBO_CONFIG.PROGRESS_ON_CLICK)
-  const decayRate = computed(() => COMBO_CONFIG.DECAY_RATE)
+  // Paramètres de Combo calculés dynamiquement avec les bonus
+  const maxMultiplier = computed(() => {
+    let add = 0
+    BONUSES.filter(b => b.type === 'combo_max' && acquiredBonuses.value.includes(b.id)).forEach(b => add += b.value)
+    return COMBO_CONFIG.MAX_MULTIPLIER + add
+  })
+  
+  const progressOnClick = computed(() => {
+    let mult = 1
+    BONUSES.filter(b => b.type === 'combo_growth' && acquiredBonuses.value.includes(b.id)).forEach(b => mult *= b.value)
+    return COMBO_CONFIG.PROGRESS_ON_CLICK * mult
+  })
+  
+  const decayRate = computed(() => {
+    let mult = 1
+    BONUSES.filter(b => b.type === 'combo_decay' && acquiredBonuses.value.includes(b.id)).forEach(b => mult *= b.value)
+    return COMBO_CONFIG.DECAY_RATE * mult
+  })
+
+  const clickMultiplierBonuses = computed(() => {
+    let mult = 1
+    BONUSES.filter(b => b.type === 'click_multiplier' && acquiredBonuses.value.includes(b.id)).forEach(b => mult *= b.value)
+    return mult
+  })
 
   // Puissance de clic de base selon les améliorations
   const baseClickPower = computed(() => {
@@ -27,12 +48,27 @@ export function useGameState() {
       const count = upgradeCounts.value[u.id] || 0
       power += count * u.clickBonus
     })
-    return power
+    return power * clickMultiplierBonuses.value
   })
 
-  // Puissance de clic totale (Base * Multiplicateur)
+  // Puissance de clic totale (Base * Multiplicateur de combo)
   const clickPower = computed(() => {
     return Math.floor(baseClickPower.value * comboMultiplier.value)
+  })
+
+  // Production de population par seconde (totalement réactive désormais)
+  const growthRate = computed(() => {
+    let rate = 0
+    UPGRADES.filter(u => u.type === 'passive').forEach(u => {
+      const count = upgradeCounts.value[u.id] || 0
+      let mult = 1
+      // Multiplicateurs de zone spécifiques provenant des bonus
+      BONUSES.filter(b => b.type === 'zone_multiplier' && b.target === u.id && acquiredBonuses.value.includes(b.id))
+             .forEach(b => mult *= b.value)
+      
+      rate += count * (u.rateBonus || 0) * mult
+    })
+    return rate
   })
 
   // Rang de la ville
@@ -82,8 +118,18 @@ export function useGameState() {
 
     if (population.value >= cost) {
       population.value -= cost
-      growthRate.value += upgrade.rateBonus || 0
       upgradeCounts.value[upgradeId] = count + 1
+      saveGame()
+    }
+  }
+
+  const buyBonus = (bonusId) => {
+    const bonus = BONUSES.find(b => b.id === bonusId)
+    if (!bonus || acquiredBonuses.value.includes(bonusId)) return
+
+    if (population.value >= bonus.cost) {
+      population.value -= bonus.cost
+      acquiredBonuses.value.push(bonusId)
       saveGame()
     }
   }
@@ -93,10 +139,10 @@ export function useGameState() {
     try {
       await resetState()
       population.value = 0
-      growthRate.value = 0
       comboMultiplier.value = 1.0
       comboProgress.value = 0
       upgradeCounts.value = {}
+      acquiredBonuses.value = []
     } catch (e) {
       console.error('Erreur Reset', e)
     }
@@ -108,8 +154,8 @@ export function useGameState() {
     try {
       await saveState({
         trombones: population.value,
-        production_rate: growthRate.value,
-        upgrades: upgradeCounts.value
+        upgrades: upgradeCounts.value,
+        bonuses: acquiredBonuses.value
       })
     } catch (e) {
       console.error('Erreur Save', e)
@@ -121,8 +167,8 @@ export function useGameState() {
       const data = await fetchState()
       if (data) {
         population.value = data.trombones || 0
-        growthRate.value = data.production_rate || 0
         upgradeCounts.value = data.upgrades || {}
+        acquiredBonuses.value = data.bonuses || []
       }
       console.log('Jeu rechargé depuis le serveur !')
     } catch (e) {
@@ -169,11 +215,14 @@ export function useGameState() {
     clickPower,
     comboMultiplier,
     comboProgress,
+    maxMultiplier,
     cityRank,
     upgradesList,
     upgradeCounts,
+    acquiredBonuses,
     buildHouse,
     buyUpgrade,
+    buyBonus,
     resetGame,
     loadGame,
     saveGame

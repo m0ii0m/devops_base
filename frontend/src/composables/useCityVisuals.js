@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue'
 import { UPGRADES } from '../config/upgrades'
+import { BONUSES } from '../config/bonuses'
 
 const SPRITE_MAP = {
   'zone': '/assets/sprite_zone-removebg-preview.png',
@@ -9,14 +10,17 @@ const SPRITE_MAP = {
   'laboratoire': '/assets/sprite_lab-removebg-preview.png'
 }
 
-export function useCityVisuals(upgradeCounts) {
+export function useCityVisuals(upgradeCounts, acquiredBonuses) {
   const zones = ref([])
 
-  watch(upgradeCounts, (newCounts) => {
+  watch([upgradeCounts, acquiredBonuses], ([newCounts, newBonuses]) => {
     if (!newCounts || Object.keys(newCounts).length === 0) {
       zones.value = []
       return
     }
+    
+    // Fallback if acquiredBonuses is undefined
+    const bonuses = newBonuses || []
 
     // Générer les zones à partir des upgrades qui ont un sprite et un count > 0
     zones.value = UPGRADES
@@ -24,7 +28,13 @@ export function useCityVisuals(upgradeCounts) {
       .map(upgrade => {
         const count = newCounts[upgrade.id] || 0
         const spriteUrl = SPRITE_MAP[upgrade.id]
-        const rateTotal = count * (upgrade.rateBonus || 0)
+        
+        // Appliquer les multiplicateurs de zone
+        let mult = 1
+        BONUSES.filter(b => b.type === 'zone_multiplier' && b.target === upgrade.id && bonuses.includes(b.id))
+               .forEach(b => mult *= b.value)
+               
+        const rateTotal = count * (upgrade.rateBonus || 0) * mult
         const cells = []
 
         for (let i = 0; i < count; i++) {

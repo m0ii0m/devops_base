@@ -21,7 +21,7 @@
     <div class="combo-section" v-if="comboMultiplier >= 1.0">
       <div class="combo-header">
         <span>COMBO</span>
-        <span class="combo-mult" :class="{ 'max-combo': comboMultiplier >= config.MAX_MULTIPLIER }">
+        <span class="combo-mult" :class="{ 'max-combo': comboMultiplier >= maxMultiplier }">
           x{{ comboMultiplier.toFixed(1) }}
         </span>
       </div>
@@ -95,7 +95,8 @@ const props = defineProps({
   userId: { type: String, required: true },
   clickPower: { type: Number, required: true },
   comboMultiplier: { type: Number, required: true },
-  comboProgress: { type: Number, required: true }
+  comboProgress: { type: Number, required: true },
+  maxMultiplier: { type: Number, required: true }
 })
 
 const emit = defineEmits(['build', 'buyUpgrade', 'refresh', 'export', 'import', 'reset', 'copyId'])
